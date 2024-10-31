@@ -5,8 +5,6 @@ const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
 const REQUEST_QUEUE = 'request_queue';
 
 // Google Custom Search API configuration
-const GOOGLE_API_KEY = 'AIzaSyA8UeuGz65PftE42HXEmTt1bQNdkfa_sII';
-const GOOGLE_CX = 'b34b4b266248b4916';
 const GOOGLE_SEARCH_API = 'https://www.googleapis.com/customsearch/v1';
 
 async function searchImage(query: string): Promise<string> {
