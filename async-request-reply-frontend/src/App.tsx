@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, RotateCcw, AlertCircle } from 'lucide-react';
+import StepsSection from './StepSection';
 
 interface Step {
   timestamp: string;
@@ -8,6 +9,55 @@ interface Step {
   details?: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
 }
+
+const customStyles = `
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rotateIn {
+    from {
+      transform: rotate(-180deg) scale(0);
+      opacity: 0;
+    }
+    to {
+      transform: rotate(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0,0,0,0.4);
+  }
+
+  .animate-fade-in-down {
+    animation: fadeInDown 0.3s ease-out;
+  }
+
+  .animate-rotate-in {
+    animation: rotateIn 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+`;
 
 const App: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -114,9 +164,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <form onSubmit={handleSubmit} className="mb-6">
+    <div className="flex flex-col gap-4 items-center justify-center p-4 w-full h-[100vh]">
+      <div className="relative bg-white rounded-lg p-4 w-1/2">
+        <form onSubmit={handleSubmit} className="">
           <div className="flex gap-2">
             <input
               type="text"
@@ -137,31 +187,15 @@ const App: React.FC = () => {
         </form>
       </div>
 
-      <div className="bg-white rounded-lg p-6 flex flex-row gap-4">
-        <div className="overflow-y-auto max-h-[500px]">
+      <div className="bg-white rounded-lg p-6 flex flex-row gap-4 w-[80vw]">
+        <div className="basis-1/2">
           <h2 className="text-xl font-semibold mb-4">Process Steps:</h2>
-          <div className="border rounded-lg divide-y bg-gray-50 text-gray-800">
-            {steps.map((step, index) => (
-              <div
-                key={index}
-                className={`p-4 flex items-center gap-2 transition-colors duration-200`}
-              >
-                {getStatusIcon(step.status)}
-                <div>
-                  <p className="font-medium">{step.message}</p>
-                  <p className="text-sm opacity-75">
-                    {new Date(step.timestamp).toLocaleTimeString()}
-                  </p>
-                  {step.details && (
-                    <p className="text-sm mt-1 opacity-90">{step.details}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <StepsSection steps={steps} getStatusIcon={getStatusIcon} />
+          <style>{customStyles}</style>
         </div>
 
-        <div>
+        <div className="basis-1/2 h-[70vh]">
+          <h2 className="text-xl font-semibold mb-4">Search Result:</h2>
           {loading && (
             <div className="flex items-center justify-center p-4 mb-6 bg-blue-50 rounded-lg">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
@@ -170,13 +204,12 @@ const App: React.FC = () => {
           )}
 
           {imageUrl && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Search Result:</h2>
-              <div className="border rounded-lg p-2 bg-gray-50">
+            <div className="h-full">
+              <div className="border rounded-lg p-2 bg-gray-50 h-full">
                 <img
                   src={imageUrl}
                   alt="Search result"
-                  className="max-w-full h-auto rounded-lg shadow-lg"
+                  className="rounded-lg shadow-lg h-full w-full object-fill"
                 />
               </div>
             </div>

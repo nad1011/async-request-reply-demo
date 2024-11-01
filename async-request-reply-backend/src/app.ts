@@ -2,18 +2,18 @@ import express from 'express';
 import amqp from 'amqplib';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
+import 'dotenv/config';
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
-const REQUEST_QUEUE = 'request_queue';
-const REPLY_QUEUE = 'reply_queue';
-
 let channel: amqp.Channel;
 
-// Simple in-memory storage for request statuses and results
+const rabbitMqUrl = process.env.RABBITMQ_URL ?? '';
+const requestQueue = process.env.REQUEST_QUEUE ?? '';
+const replyQueue = process.env.REPLY_QUEUE ?? '';
+
 const requests: {
   [key: string]: {
     timestamp: number, status: string, result?: string
@@ -34,7 +34,7 @@ setInterval(cleanupRequests, 60 * 1000); // Run cleanup every minute
 
 async function setupReplyQueueConsumer() {
   console.log('Setting up reply queue consumer...');
-  await channel.consume(REPLY_QUEUE, (msg) => {
+  await channel.consume(replyQueue, (msg) => {
     if (msg) {
       const correlationId = msg.properties.correlationId;
       if (correlationId && requests[correlationId]) {
@@ -58,14 +58,14 @@ async function setupReplyQueueConsumer() {
 async function setupRabbitMQ() {
   try {
     console.log('Connecting to RabbitMQ...');
-    const connection = await amqp.connect(RABBITMQ_URL, { protocol: 'amqp' });
+    const connection = await amqp.connect(rabbitMqUrl, { protocol: 'amqp' });
     console.log('Connected to RabbitMQ');
 
     channel = await connection.createChannel();
     console.log('Channel created');
 
-    await channel.assertQueue(REQUEST_QUEUE);
-    await channel.assertQueue(REPLY_QUEUE);
+    await channel.assertQueue(requestQueue);
+    await channel.assertQueue(replyQueue);
     console.log('Queues asserted');
 
     await setupReplyQueueConsumer();
@@ -100,9 +100,9 @@ app.post('/api/request', async (req, res) => {
   };
 
   try {
-    channel.sendToQueue(REQUEST_QUEUE, Buffer.from(message), {
+    channel.sendToQueue(requestQueue, Buffer.from(message), {
       correlationId,
-      replyTo: REPLY_QUEUE,
+      replyTo: replyQueue,
     });
 
     console.log(`[${new Date().toISOString()}] Sent message to REQUEST_QUEUE`);

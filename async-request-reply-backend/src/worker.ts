@@ -1,20 +1,19 @@
 import amqp from 'amqplib';
 import axios from 'axios';
-
-const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
-const REQUEST_QUEUE = 'request_queue';
-
-// Google Custom Search API configuration
-const GOOGLE_SEARCH_API = 'https://www.googleapis.com/customsearch/v1';
+import 'dotenv/config';
 
 async function searchImage(query: string): Promise<string> {
   console.log(`[${new Date().toISOString()}] Searching for image: ${query}`);
-  
+
+  const googleSearchApis = process.env.GOOGLE_SEARCH_API ?? '';
+  const googleApisKey = process.env.GOOGLE_API_KEY ?? '';
+  const googleCx = process.env.GOOGLE_CX ?? '';
+
   try {
-    const response = await axios.get(GOOGLE_SEARCH_API, {
+    const response = await axios.get(googleSearchApis, {
       params: {
-        key: GOOGLE_API_KEY,
-        cx: GOOGLE_CX,
+        key: googleApisKey,
+        cx: googleCx,
         q: query,
         searchType: 'image',
         num: 1
@@ -42,30 +41,33 @@ async function processMessage(msg: string): Promise<string> {
 }
 
 async function startWorker() {
+  const rabbitMqUrl = process.env.RABBITMQ_URL ?? '';
+  const requestQueue = process.env.REQUEST_QUEUE ?? '';
+
   try {
     console.log('Worker connecting to RabbitMQ...');
-    const connection = await amqp.connect(RABBITMQ_URL, { protocol: 'amqp' });
+    const connection = await amqp.connect(rabbitMqUrl, { protocol: 'amqp' });
     console.log('Worker connected to RabbitMQ');
-    
+
     const channel = await connection.createChannel();
     console.log('Worker channel created');
-    
-    await channel.assertQueue(REQUEST_QUEUE);
-    console.log('Worker asserted REQUEST_QUEUE');
-    
+
+    await channel.assertQueue(requestQueue);
+    console.log(`Worker asserted ${requestQueue}`);
+
     await channel.prefetch(1);
     console.log('Worker is waiting for messages...');
 
-    channel.consume(REQUEST_QUEUE, async (msg) => {
+    channel.consume(requestQueue, async (msg) => {
       if (msg) {
         try {
           console.log(`[${new Date().toISOString()}] Worker received message: ${msg.content.toString()}`);
           const reply = await processMessage(msg.content.toString());
-          
+
           channel.sendToQueue(msg.properties.replyTo, Buffer.from(reply), {
             correlationId: msg.properties.correlationId,
-          }); 
-          
+          });
+
           console.log(`[${new Date().toISOString()}] Worker sent reply: ${reply}`);
           channel.ack(msg);
         } catch (error: any) {
@@ -76,7 +78,7 @@ async function startWorker() {
             correlationId: msg.properties.correlationId,
           });
           channel.ack(msg);
-        } 
+        }
       }
     });
 
